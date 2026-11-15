@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { Alert, RoleBadge } from '../ui';
 
@@ -9,12 +9,20 @@ const ROLE_HELP = {
   Student: 'Study your enrolled courses and submit work',
 };
 
+const DEMO_ACCOUNTS = [
+  { role: 'Admin', username: 'admin@nsuk.edu.ng', password: 'Admin@12345' },
+  { role: 'Lecturer', username: 'n.ajumobi@nsuk.edu.ng', password: 'Lecturer@123' },
+  { role: 'Student', username: 'peace.o@student.nsuk.edu.ng', password: 'Student@123' },
+];
+
 // Fig. 4.1: login page. Errors stay general so usernames cannot be discovered.
 export default function Login() {
   const { login, notice, setNotice } = useAuth();
   const navigate = useNavigate();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const location = useLocation();
+  const prefill = location.state?.prefill;
+  const [username, setUsername] = useState(prefill?.username || '');
+  const [password, setPassword] = useState(prefill?.password || '');
   const [roles, setRoles] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -37,13 +45,20 @@ export default function Login() {
     }
   }
 
+  function fillDemo(d) {
+    setUsername(d.username);
+    setPassword(d.password);
+    setError('');
+  }
+
   return (
     <div className="login-page">
       <section className="login-intro">
-        <div className="login-brand">
+        <div className="login-intro-glow" aria-hidden="true" />
+        <Link className="login-brand" to="/">
           <svg viewBox="0 0 32 32" width="40" height="40" aria-hidden="true"><rect width="32" height="32" rx="8" fill="currentColor" /><path d="M16 7l9 4.5-9 4.5-9-4.5z" fill="#134e4a" /><path d="M10 14v5c0 2 3 3.5 6 3.5s6-1.5 6-3.5v-5" stroke="#134e4a" strokeWidth="2" fill="none" /></svg>
           <span>SecureLearn</span>
-        </div>
+        </Link>
         <h1>Secure e-learning for tertiary institutions</h1>
         <p>Every request is checked against your role. Students, lecturers and administrators each see only the tools their duties require.</p>
         <ul className="login-points">
@@ -51,6 +66,17 @@ export default function Login() {
           <li>Signed 30-minute session tokens</li>
           <li>Every access decision recorded in an audit log</li>
         </ul>
+
+        <div className="login-demo-box">
+          <span className="muted small">Quick demo sign-in</span>
+          <div className="login-demo-chips">
+            {DEMO_ACCOUNTS.map((d) => (
+              <button key={d.role} type="button" className="login-demo-chip" onClick={() => fillDemo(d)}>
+                <RoleBadge role={d.role} />
+              </button>
+            ))}
+          </div>
+        </div>
       </section>
 
       <section className="login-card-wrap">
@@ -71,6 +97,7 @@ export default function Login() {
               </label>
               <button className="btn btn-primary btn-block" disabled={busy || !username || !password}>{busy ? 'Signing in…' : 'Sign in'}</button>
               <p className="muted small login-foot">After 5 failed attempts the account is locked for 15 minutes.</p>
+              <p className="muted small login-foot"><Link to="/">← Back to home</Link></p>
             </form>
           ) : (
             <div>
