@@ -1,0 +1,21 @@
+# Dependencies and build output
+node_modules/
+client/dist/
+
+# Secrets and local configuration (created by setup.js)
+.env
+*.env.local
+
+# User-uploaded files
+server/uploads/
+
+# Local editor / tool settings
+.claude/
+
+# Thesis document (kept local only)
+*.doc
+*.docx
+
+# OS files
+Thumbs.db
+.DS_Store

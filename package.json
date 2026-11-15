@@ -1,0 +1,19 @@
+{
+  "name": "securelearn",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Secure e-learning system using role-based access control for tertiary institutions",
+  "scripts": {
+    "setup": "node setup.js",
+    "start": "npm --prefix server start",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build": "npm --prefix client run build",
+    "test": "npm --prefix server test",
+    "db:reset": "npm --prefix server run db:reset",
+    "db:export": "npm --prefix server run db:export"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
