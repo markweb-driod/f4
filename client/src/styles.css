@@ -358,9 +358,18 @@ td.empty { border-radius: 0; border: 0; }
   background: radial-gradient(circle, rgba(63, 183, 168, .16), transparent 70%); pointer-events: none;
 }
 .login-demo-box { margin-top: auto; padding-top: 28px; position: relative; }
-.login-demo-chips { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-.login-demo-chip { border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06); border-radius: 999px; padding: 4px 6px; cursor: pointer; transition: background .12s, border-color .12s; }
-.login-demo-chip:hover { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.3); }
+.login-demo-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.login-demo-row {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; text-align: left;
+  border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.05); border-radius: 8px;
+  padding: 8px 12px; cursor: pointer; font: inherit; transition: background .12s, border-color .12s; width: 100%;
+}
+.login-demo-row:hover { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.28); }
+.login-demo-row-creds { display: flex; gap: 10px; flex-wrap: wrap; margin-left: auto; font-size: .8rem; }
+.login-demo-row-creds .mono { color: #dce9e6; }
+.login-demo-row-creds .mono.muted { color: #92a9a4; }
+@keyframes field-flash { 0% { outline-color: var(--ok); background: var(--ok-soft); } 100% { outline-color: transparent; background: var(--surface); } }
+.field-flash { animation: field-flash 1.1s ease-out; }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 960px) {

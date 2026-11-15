@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { Alert, RoleBadge } from '../ui';
@@ -13,6 +13,7 @@ const DEMO_ACCOUNTS = [
   { role: 'Admin', username: 'admin@nsuk.edu.ng', password: 'Admin@12345' },
   { role: 'Lecturer', username: 'n.ajumobi@nsuk.edu.ng', password: 'Lecturer@123' },
   { role: 'Student', username: 'peace.o@student.nsuk.edu.ng', password: 'Student@123' },
+  { role: 'Student', username: 'ta.john@nsuk.edu.ng', password: 'Assist@123', label: 'Student + Lecturer' },
 ];
 
 // Fig. 4.1: login page. Errors stay general so usernames cannot be discovered.
@@ -26,6 +27,8 @@ export default function Login() {
   const [roles, setRoles] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [justFilled, setJustFilled] = useState(false);
+  const cardRef = useRef(null);
 
   async function submit(e, role) {
     e?.preventDefault();
@@ -49,6 +52,10 @@ export default function Login() {
     setUsername(d.username);
     setPassword(d.password);
     setError('');
+    setRoles(null);
+    setJustFilled(true);
+    setTimeout(() => setJustFilled(false), 1200);
+    cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   return (
@@ -68,11 +75,16 @@ export default function Login() {
         </ul>
 
         <div className="login-demo-box">
-          <span className="muted small">Quick demo sign-in</span>
-          <div className="login-demo-chips">
+          <span className="muted small">Demo accounts — tap to auto-fill</span>
+          <div className="login-demo-list">
             {DEMO_ACCOUNTS.map((d) => (
-              <button key={d.role} type="button" className="login-demo-chip" onClick={() => fillDemo(d)}>
+              <button key={d.username} type="button" className="login-demo-row" onClick={() => fillDemo(d)}>
                 <RoleBadge role={d.role} />
+                {d.label && <span className="muted small">{d.label}</span>}
+                <span className="login-demo-row-creds">
+                  <span className="mono">{d.username}</span>
+                  <span className="mono muted">{d.password}</span>
+                </span>
               </button>
             ))}
           </div>
@@ -80,20 +92,21 @@ export default function Login() {
       </section>
 
       <section className="login-card-wrap">
-        <div className="login-card">
+        <div className="login-card" ref={cardRef}>
           {!roles ? (
             <form onSubmit={submit} noValidate>
               <h2>Sign in</h2>
               <p className="muted">Use your institutional email and password.</p>
               <Alert kind="info" onClose={() => setNotice('')}>{notice}</Alert>
               <Alert kind="error">{error}</Alert>
+              {justFilled && <Alert kind="success">Demo credentials filled in — click Sign in.</Alert>}
               <label className="field">
                 <span>Username</span>
-                <input type="text" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="name@nsuk.edu.ng" required autoFocus />
+                <input type="text" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="name@nsuk.edu.ng" required autoFocus className={justFilled ? 'field-flash' : ''} />
               </label>
               <label className="field">
                 <span>Password</span>
-                <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required className={justFilled ? 'field-flash' : ''} />
               </label>
               <button className="btn btn-primary btn-block" disabled={busy || !username || !password}>{busy ? 'Signing in…' : 'Sign in'}</button>
               <p className="muted small login-foot">After 5 failed attempts the account is locked for 15 minutes.</p>
