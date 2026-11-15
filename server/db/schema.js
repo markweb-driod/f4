@@ -100,6 +100,7 @@ const TABLES = [
      title        VARCHAR(150) NOT NULL,
      description  TEXT NULL,
      filePath     VARCHAR(255) NULL,
+     fileData     MEDIUMBLOB NULL,
      originalName VARCHAR(255) NULL,
      mimeType     VARCHAR(100) NULL,
      fileSize     INT NULL,
@@ -128,6 +129,7 @@ const TABLES = [
      studentID    INT NOT NULL,
      content      TEXT NULL,
      filePath     VARCHAR(255) NULL,
+     fileData     MEDIUMBLOB NULL,
      originalName VARCHAR(255) NULL,
      mimeType     VARCHAR(100) NULL,
      fileSize     INT NULL,
@@ -252,6 +254,13 @@ const PROCEDURES = [
    END`,
 ];
 
+// Columns added after the first release: [table, column, definition]. setup.js adds any
+// that an existing database is missing, so upgrading never needs a reset.
+const COLUMN_UPGRADES = [
+  ['tbl_materials', 'fileData', 'MEDIUMBLOB NULL AFTER filePath'],
+  ['tbl_submissions', 'fileData', 'MEDIUMBLOB NULL AFTER filePath'],
+];
+
 // Tables the application account may only read / append to (database-level isolation).
 const TABLE_GRANTS = {
   tbl_users: 'SELECT, INSERT, UPDATE, DELETE',
@@ -269,4 +278,4 @@ const TABLE_GRANTS = {
   tbl_grades: 'SELECT', // writes only via sp_record_grade / sp_release_grades
 };
 
-module.exports = { TABLES, PROCEDURES, TABLE_GRANTS };
+module.exports = { TABLES, PROCEDURES, TABLE_GRANTS, COLUMN_UPGRADES };

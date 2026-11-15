@@ -2,13 +2,16 @@
 
 Implementation of the B.Sc. project *Design and Implementation of a Secure E-Learning System Using Role-Based Access Control for Tertiary Institutions* (Nwaonuma Peace Ogechi, Dept. of Computer Science, Nasarawa State University, Keffi).
 
-Stack (Chapter 4, Table 4.2): **Node.js + Express**, **MySQL / MariaDB**, **React**, **bcrypt** (pure-JavaScript `bcryptjs`), **jsonwebtoken**, **helmet**, **express-rate-limit**, **Jest + Supertest**. No Docker is needed: everything runs directly on Windows, macOS or Linux.
+Stack (Chapter 4, Table 4.2): **Node.js + Express**, **MySQL / MariaDB**, **React**, **bcrypt** (pure-JavaScript `bcryptjs`), **jsonwebtoken**, **helmet**, **express-rate-limit**, **Jest + Supertest**. No Docker is needed: it runs directly on Windows, macOS or Linux, and can also be deployed to Vercel.
 
 ```
 F4/
-├── setup.bat / start.bat   Windows: double-click to install / run
-├── setup.js                One-step installer (all platforms: npm run setup)
-├── SETUP_GUIDE.md          Full installation guide, demo tour, troubleshooting
+├── setup.bat / start.bat   Windows: double-click to install / run locally
+├── setup.js                One-step local installer (all platforms: npm run setup)
+├── vercel-setup.js         Prepares a hosted database for a Vercel deployment
+├── vercel.json, api/       Vercel serverless entry point and routing
+├── SETUP_GUIDE.md          Local installation guide, demo tour, troubleshooting
+├── VERCEL_DEPLOY.md        Deploying to the public internet with Vercel + Aiven
 ├── server/                 Express API
 │   ├── db/
 │   │   ├── schema.js        tables + stored procedures
@@ -18,12 +21,12 @@ F4/
 │   ├── src/
 │   │   ├── middleware/authorize.js   RBAC security gatekeeper (Section 4.4.3)
 │   │   ├── routes/         auth, users, roles, courses, materials, assignments, grades, audit
-│   │   └── services/       tokens (JWT), audit log, ownership checks, uploads
+│   │   └── services/       tokens (JWT), audit log, ownership checks, uploads (disk or database)
 │   └── tests/              unit, functional (FT-01…FT-11) and security (ST-01…ST-12) tests
 └── client/                 React front end (Vite)
 ```
 
-## Quick start
+## Quick start (your own computer)
 
 **See [SETUP_GUIDE.md](SETUP_GUIDE.md) for step-by-step instructions.** In short:
 
@@ -41,6 +44,16 @@ F4/
 | `npm test` | Runs the 41 automated tests against a separate test database |
 | `npm run db:export` | Regenerates `server/db/rbac_elearning.sql` from the demo data |
 | `npm run dev:server` + `npm run dev:client` | Development mode with hot reload at http://localhost:5173 |
+| `npm run vercel:setup` | Prepares a hosted MySQL database and the settings Vercel needs (see below) |
+
+## Deploy it on the internet (Vercel)
+
+**See [VERCEL_DEPLOY.md](VERCEL_DEPLOY.md).** In short: create a free MySQL database on
+[Aiven](https://aiven.io), run `npm run vercel:setup` to create the schema and demo data
+on it, import the GitHub repository into [Vercel](https://vercel.com), paste the
+generated settings into its environment variables, and deploy. Because Vercel's
+filesystem isn't persistent, uploaded files are stored inside the database instead
+(`FILE_STORAGE=database`), capped at about 4 MB per file.
 
 ## Demo data
 
@@ -103,4 +116,6 @@ All routes are under `/api/v1`. Every route except `auth/login` needs `Authoriza
 
 ## Deployment
 
-The system runs directly on the host with Node.js and MySQL/MariaDB. For HTTPS, put it behind a reverse proxy (nginx, Apache or IIS) or set `TLS_CERT`/`TLS_KEY`. See [SETUP_GUIDE.md § 12](SETUP_GUIDE.md#12-before-real-use).
+**On your own server:** runs directly with Node.js and MySQL/MariaDB. For HTTPS, put it behind a reverse proxy (nginx, Apache or IIS) or set `TLS_CERT`/`TLS_KEY`. See [SETUP_GUIDE.md § 12](SETUP_GUIDE.md#12-before-real-use).
+
+**On the public internet without your own server:** see [VERCEL_DEPLOY.md](VERCEL_DEPLOY.md) — Vercel for the app, a free hosted MySQL database (Aiven) for the data, HTTPS included by default.

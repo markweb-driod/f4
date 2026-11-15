@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
-import { Alert, Empty, Loaded, Modal, PageHeader, fmtDate, fmtDateTime, fmtSize, timeLeft, toLocalInput, useAction, useApi } from '../ui';
+import { Alert, Empty, Loaded, Modal, PageHeader, fmtDate, fmtDateTime, fmtSize, timeLeft, toLocalInput, useAction, useApi, useUploadLimit } from '../ui';
 import { GradeSheet } from './Grades';
 
 const ACCEPT = '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md,.csv,.zip,.png,.jpg,.jpeg';
@@ -113,6 +113,26 @@ function Materials({ course }) {
   );
 }
 
+// File picker that rejects files over the server's upload limit before sending them.
+function FileField({ label, onFile, onError }) {
+  const mb = useUploadLimit();
+  return (
+    <label className="field"><span>{label}{mb ? `, up to ${mb} MB` : ''}</span>
+      <input type="file" accept={ACCEPT} onChange={(e) => {
+        const f = e.target.files[0] || null;
+        if (f && mb && f.size > mb * 1024 * 1024) {
+          onError(`"${f.name}" is ${(f.size / 1048576).toFixed(1)} MB. The limit is ${mb} MB.`);
+          e.target.value = '';
+          onFile(null);
+          return;
+        }
+        onError('');
+        onFile(f);
+      }} />
+    </label>
+  );
+}
+
 function UploadMaterial({ course, onClose, onDone }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -132,7 +152,7 @@ function UploadMaterial({ course, onClose, onDone }) {
         <Alert kind="error">{a.error}</Alert>
         <label className="field"><span>Title</span><input value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={150} /></label>
         <label className="field"><span>Notes or content</span><textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} /></label>
-        <label className="field"><span>File (optional, up to 10 MB)</span><input type="file" accept={ACCEPT} onChange={(e) => setFile(e.target.files[0] || null)} /></label>
+        <FileField label="File (optional)" onFile={setFile} onError={a.setError} />
         <div className="modal-actions"><button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button><button className="btn btn-primary" disabled={a.busy}>{a.busy ? 'Uploading…' : 'Publish'}</button></div>
       </form>
     </Modal>
@@ -230,7 +250,7 @@ function SubmitForm({ item, onClose, onDone }) {
         <p className="muted small">Due {fmtDateTime(item.dueAt)}. You can resubmit until the deadline; the latest submission replaces the earlier one.</p>
         <Alert kind="error">{a.error}</Alert>
         <label className="field"><span>Your answer</span><textarea rows={6} value={content} onChange={(e) => setContent(e.target.value)} placeholder="Type your answer, or attach a file below" /></label>
-        <label className="field"><span>Attachment (optional, up to 10 MB)</span><input type="file" accept={ACCEPT} onChange={(e) => setFile(e.target.files[0] || null)} /></label>
+        <FileField label="Attachment (optional)" onFile={setFile} onError={a.setError} />
         <div className="modal-actions"><button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button><button className="btn btn-primary" disabled={a.busy || (!content.trim() && !file)}>{a.busy ? 'Submitting…' : 'Submit'}</button></div>
       </form>
     </Modal>

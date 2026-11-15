@@ -43,7 +43,7 @@ if (!env.isTest) {
 // API responses must never be cached by browsers or proxies.
 app.use('/api/', (req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
 
-app.get('/api/v1/health', (req, res) => res.json({ ok: true }));
+app.get('/api/v1/health', (req, res) => res.json({ ok: true, maxUploadMb: env.maxUploadMb }));
 app.use('/api/v1/auth', require('./routes/auth'));
 app.use('/api/v1/profile', require('./routes/profile'));
 app.use('/api/v1/users', require('./routes/users'));

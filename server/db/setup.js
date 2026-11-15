@@ -2,16 +2,20 @@
 // and the demo data. Usage:
 //   node db/setup.js            create anything missing and load demo data into an empty database
 //   node db/setup.js --reset    drop and recreate the database (destroys all data)
+//   node db/setup.js --env=.env.vercel   use another settings file (e.g. a hosted database)
 //
 // Connects with DB_ROOT_USER / DB_ROOT_PASSWORD (an account allowed to create databases,
 // users and procedures). The app itself then runs as DB_USER, which only receives the
 // limited grants in TABLE_GRANTS.
 
-require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+const path = require('path');
+const envArg = process.argv.find((a) => a.startsWith('--env='));
+require('dotenv').config({ path: path.resolve(path.join(__dirname, '..'), envArg ? envArg.slice(6) : '.env') });
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
-const { TABLES, PROCEDURES, TABLE_GRANTS } = require('./schema');
+const { TABLES, PROCEDURES, TABLE_GRANTS, COLUMN_UPGRADES } = require('./schema');
 const { buildSeedStatements, isComment } = require('./seed-sql');
+const { dbSsl } = require('../src/config/ssl');
 
 function config() {
   return {
@@ -40,14 +44,15 @@ function appAccountStatements(database, user, passwordSql) {
     for (const [table, privs] of Object.entries(TABLE_GRANTS)) out.push(`GRANT ${privs} ON ${ident(database)}.${ident(table)} TO ${acc}`);
     out.push(`GRANT EXECUTE ON ${ident(database)}.* TO ${acc}`);
   }
-  out.push('FLUSH PRIVILEGES');
   return out;
 }
 
 async function setup({ reset = false, quiet = false } = {}) {
   const c = config();
   const log = quiet ? () => {} : (...a) => console.log(...a);
-  const conn = await mysql.createConnection({ host: c.host, port: c.port, user: c.rootUser, password: c.rootPassword, timezone: 'Z' });
+  const conn = await mysql.createConnection({
+    host: c.host, port: c.port, user: c.rootUser, password: c.rootPassword, timezone: 'Z', ssl: dbSsl(), connectTimeout: 20000,
+  });
   try {
     await conn.query("SET time_zone = '+00:00'");
     if (reset) {
@@ -58,6 +63,14 @@ async function setup({ reset = false, quiet = false } = {}) {
     await conn.query(`USE ${ident(c.database)}`);
 
     for (const sql of TABLES) await conn.query(sql);
+    for (const [table, column, definition] of COLUMN_UPGRADES) {
+      const [found] = await conn.query(
+        'SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?', [c.database, table, column]);
+      if (!found.length) {
+        await conn.query(`ALTER TABLE ${ident(table)} ADD COLUMN ${ident(column)} ${definition}`);
+        log(`  Upgraded ${table}: added ${column}`);
+      }
+    }
     for (const sql of PROCEDURES) await conn.query(sql);
     log('  Tables and stored procedures ready');
 

@@ -86,6 +86,17 @@ export function RoleBadge({ role }) {
   return <span className={`badge role-${String(role).toLowerCase()}`}>{role}</span>;
 }
 
+// Maximum upload size reported by the server (4 MB on Vercel, 10 MB on a normal server).
+let uploadLimitPromise = null;
+export function useUploadLimit() {
+  const [mb, setMb] = useState(null);
+  useEffect(() => {
+    uploadLimitPromise ||= fetch('/api/v1/health').then((r) => r.json()).then((d) => d.maxUploadMb).catch(() => null);
+    uploadLimitPromise.then(setMb);
+  }, []);
+  return mb;
+}
+
 // Submit handler helper: runs an async action, tracks busy + error.
 export function useAction() {
   const [busy, setBusy] = useState(false);

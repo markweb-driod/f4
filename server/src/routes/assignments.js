@@ -2,7 +2,7 @@ const express = require('express');
 const db = require('../config/db');
 const { authorize, denyOwnership } = require('../middleware/authorize');
 const { canViewCourse, canManageCourse, courseExists, isEnrolled } = require('../services/ownership');
-const { singleFile, removeFile, sendStored } = require('../services/upload');
+const { singleFile, fileColumns, removeFile, discardUpload, sendStored } = require('../services/upload');
 const { asyncHandler, HttpError, toId, requireString, optionalString } = require('../utils/http');
 
 const router = express.Router();
@@ -101,33 +101,33 @@ router.delete('/assignments/:id', authorize('/api/v1/assignments', 'DELETE'), as
 
 // Student submits (or resubmits) before the deadline (FT-07).
 router.post('/assignments/:id/submissions', authorize('/api/v1/submissions', 'CREATE'), singleFile('file'), asyncHandler(async (req, res) => {
-  const f = req.file;
   try {
     const a = await getAssignment(toId(req.params.id));
     if (req.user.role !== 'Student' || !(await isEnrolled(req.user.id, a.courseID))) {
-      removeFile(f && f.filename);
+      discardUpload(req.file);
       return denyOwnership(req, res, 'CREATE', `not enrolled in course ${a.courseID}`);
     }
     if (new Date(a.dueAt).getTime() < Date.now()) throw new HttpError(400, 'The deadline for this assignment has passed');
     const content = optionalString(req.body.content, 'Answer', 20000);
-    if (!f && !content) throw new HttpError(400, 'Attach a file or type your answer');
+    if (!req.file && !content) throw new HttpError(400, 'Attach a file or type your answer');
+    const f = fileColumns(req.file);
 
     const [[old]] = await db.execute('SELECT submissionID, filePath FROM tbl_submissions WHERE assignmentID = ? AND studentID = ?', [a.assignmentID, req.user.id]);
     if (old) {
       await db.execute(
-        `UPDATE tbl_submissions SET content = ?, filePath = ?, originalName = ?, mimeType = ?, fileSize = ?, submittedAt = UTC_TIMESTAMP()
+        `UPDATE tbl_submissions SET content = ?, filePath = ?, fileData = ?, originalName = ?, mimeType = ?, fileSize = ?, submittedAt = UTC_TIMESTAMP()
           WHERE submissionID = ?`,
-        [content, f ? f.filename : null, f ? f.originalname.slice(0, 255) : null, f ? f.mimetype : null, f ? f.size : null, old.submissionID]);
+        [content, f.filePath, f.fileData, f.originalName, f.mimeType, f.fileSize, old.submissionID]);
       removeFile(old.filePath);
       return res.json({ id: old.submissionID, resubmitted: true });
     }
     const [r] = await db.execute(
-      `INSERT INTO tbl_submissions (assignmentID, studentID, content, filePath, originalName, mimeType, fileSize)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [a.assignmentID, req.user.id, content, f ? f.filename : null, f ? f.originalname.slice(0, 255) : null, f ? f.mimetype : null, f ? f.size : null]);
+      `INSERT INTO tbl_submissions (assignmentID, studentID, content, filePath, fileData, originalName, mimeType, fileSize)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [a.assignmentID, req.user.id, content, f.filePath, f.fileData, f.originalName, f.mimeType, f.fileSize]);
     res.status(201).json({ id: r.insertId });
   } catch (e) {
-    removeFile(f && f.filename);
+    discardUpload(req.file);
     throw e;
   }
 }));
@@ -154,13 +154,15 @@ router.get('/assignments/:id/submissions', authorize('/api/v1/submissions', 'REA
 router.get('/submissions/:id/download', authorize('/api/v1/submissions', 'READ'), asyncHandler(async (req, res) => {
   const id = toId(req.params.id);
   const [[s]] = await db.execute(
-    `SELECT s.*, a.courseID FROM tbl_submissions s JOIN tbl_assignments a ON a.assignmentID = s.assignmentID WHERE s.submissionID = ?`, [id]);
+    `SELECT s.studentID, s.filePath, (s.fileData IS NOT NULL) AS hasData, a.courseID
+       FROM tbl_submissions s JOIN tbl_assignments a ON a.assignmentID = s.assignmentID WHERE s.submissionID = ?`, [id]);
   if (!s) throw new HttpError(404, 'Submission not found');
   const ownStudent = req.user.role === 'Student' && s.studentID === req.user.id;
   const ownLecturer = req.user.role === 'Lecturer' && (await canManageCourse(req.user, s.courseID));
   if (!ownStudent && !ownLecturer) return denyOwnership(req, res, 'READ', `submission ${id}`);
-  if (!s.filePath) throw new HttpError(404, 'This submission has no attached file');
-  sendStored(res, s.filePath, s.originalName, s.mimeType);
+  if (!s.filePath && !Number(s.hasData)) throw new HttpError(404, 'This submission has no attached file');
+  const [[file]] = await db.execute('SELECT filePath, fileData, originalName, mimeType FROM tbl_submissions WHERE submissionID = ?', [id]);
+  sendStored(res, file);
 }));
 
 module.exports = router;

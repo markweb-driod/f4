@@ -2,9 +2,13 @@
 node_modules/
 client/dist/
 
-# Secrets and local configuration (created by setup.js)
+# Secrets and local configuration (created by setup.js / vercel-setup.js)
 .env
-*.env.local
+.env.*
+!.env.example
+vercel-env.txt
+*.pem
+.vercel/
 
 # User-uploaded files
 server/uploads/

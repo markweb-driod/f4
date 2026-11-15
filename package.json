@@ -11,7 +11,8 @@
     "build": "npm --prefix client run build",
     "test": "npm --prefix server test",
     "db:reset": "npm --prefix server run db:reset",
-    "db:export": "npm --prefix server run db:export"
+    "db:export": "npm --prefix server run db:export",
+    "vercel:setup": "node vercel-setup.js"
   },
   "engines": {
     "node": ">=18"

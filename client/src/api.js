@@ -39,7 +39,7 @@ async function request(method, url, body, { raw = false } = {}) {
   const text = await res.text();
   try { data = text ? JSON.parse(text) : null; } catch { data = null; }
   if (!res.ok) {
-    const msg = data?.error || `Request failed (${res.status})`;
+    const msg = data?.error || (res.status === 413 ? 'The upload is too large.' : `Request failed (${res.status})`);
     if (res.status === 401 && s?.token && !url.endsWith('/auth/login')) onUnauthorized(msg);
     throw new ApiError(res.status, msg);
   }
